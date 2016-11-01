@@ -1,4 +1,5 @@
-#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "memory.h"
 #include "processor.h"
@@ -24,8 +25,8 @@ void alu_sr(unsigned char bit, bool condition)
 // return value without overflow
 unsigned char alu_check (short arg)
 {
-	alu_sr(SIGN, (arg & 0x80 != 0));
-	alu_sr(ZERO, (arg & 0xFF == 0));
+	alu_sr(SIGN, (arg & 0x80) != 0);
+	alu_sr(ZERO, (arg & 0xFF) == 0);
 
 	return (unsigned char) arg & 0xFF;
 }
@@ -51,7 +52,7 @@ unsigned char alu_adc(unsigned char reg, unsigned char arg)
 	if ((sr & CARY) != 0) result += 1;
 	alu_sr(CARY, result > 255);
 	result = alu_check(result);
-	alu_sr(OVFL, (reg & 0x80) == 0 && result & 0x80 != 0);
+	alu_sr(OVFL, ((reg & 0x80) == 0) && ((result & 0x80) != 0));
 	return result;
 }
 
@@ -62,7 +63,7 @@ unsigned char alu_sbc(unsigned char reg, unsigned char arg)
 	if ((sr & CARY) != 0) result -= 1;
 	alu_sr(CARY, result > 255);
 	result = alu_check(result);
-	alu_sr(OVFL, (reg & 0x80) == 0 && result & 0x80 != 0);
+	alu_sr(OVFL, ((reg & 0x80) == 0) && ((result & 0x80) != 0));
 	return result;
 }
 
@@ -88,7 +89,7 @@ void alu_cmp (unsigned char reg, unsigned short arg)
 
 unsigned char alu_aslRol(unsigned char reg, bool rotate)
 {
-	bool oldCarry = sr & CARY != 0;
+	bool oldCarry = (sr & CARY) != 0;
 	short result = reg << 1;
 	bool newCarry = result > 0xFF;
 	alu_sr(CARY, newCarry);
@@ -99,9 +100,9 @@ unsigned char alu_aslRol(unsigned char reg, bool rotate)
 
 unsigned char alu_lsrRor(unsigned char reg, bool rotate)
 {
-	bool oldCarry = sr & CARY != 0;
+	bool oldCarry = (sr & CARY) != 0;
 	short result = reg >> 1;
-	bool newCarry = reg & 0x01 != 0;
+	bool newCarry = (reg & 0x01) != 0;
 	alu_sr(CARY, newCarry);
 	if(rotate && oldCarry) result &= 0x80;
 	return result;
@@ -122,7 +123,7 @@ void alu_push (unsigned char value)
 
 unsigned char alu_pull()
 {
-	return alu_check(mem_get(word(sp++, 0x01)));
+	return alu_check(mem_get(word(++sp, 0x01)));
 }
 
 unsigned short alu_pullWord()

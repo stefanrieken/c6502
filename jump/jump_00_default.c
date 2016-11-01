@@ -56,7 +56,8 @@ void sty (unsigned char aaa, unsigned char bbb, unsigned char cc)
 
 void ldy (unsigned char aaa, unsigned char bbb, unsigned char cc)
 {
-	y = mem_get(resolveOperand(bbb, cc));
+	y = alu_check(resolveOperand(bbb, cc));
+	printf("Y: %x\n", y);
 }
 
 

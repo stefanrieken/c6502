@@ -35,6 +35,7 @@ static void branch(unsigned char aaa, unsigned char bbb, unsigned char cc)
 
 	if ((test && y == 1) || (!test && y == 0))
 	{
+		printf("sr: %d\n", sr);
 		printf("Branching relative: %d\n", relative);
 		pc += relative;
 	}

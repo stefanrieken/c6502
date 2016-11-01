@@ -8,8 +8,5 @@ That project replicates the functionality of 6502asm.com .
 Status
 ------
 
-It almost works!
-
-Current issue is that argument processing order in C is
-different than in Java, which makes 'word(mem.get(pc++), mem.get(pc++))
-a little awkward.
+With the exception of the keyboard input device (which is not implemented),
+the 6502asm.com examples work.

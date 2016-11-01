@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <gtk/gtk.h>
 
 #include "memory.h"
@@ -85,7 +86,8 @@ int display_init (char * app_name)
 
 static gboolean in_gtk_thread(gpointer user_data)
 {
-	gtk_widget_queue_draw(window);
+	if (GTK_IS_WIDGET(window))
+		gtk_widget_queue_draw(window);
 	return G_SOURCE_REMOVE;
 }
 

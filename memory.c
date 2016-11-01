@@ -1,9 +1,14 @@
+#include <stdlib.h>
+
 #include "display.h"
 
 static unsigned char memory[65536];
 
 unsigned char mem_get(unsigned short address)
 {
+	if (address == 0x00FE)
+		return rand() % 256;
+
 	return memory[address];
 }
 

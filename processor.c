@@ -53,7 +53,8 @@ bool p_run()
 	unsigned char bbb = (opcode & 0b11100) >> 2;
 	unsigned char cc = opcode & 0b11;
 
-	jump_cc[cc](aaa,bbb,cc);
+	if (cc < 0b11) // 0b11 does not exist as an option
+		jump_cc[cc](aaa,bbb,cc);
 
 	if (opcode == 0) printf("Exiting on BRK\n");
 	return opcode != 0;
@@ -64,22 +65,26 @@ unsigned short resolveAddress(unsigned char bbb) {
 	if (bbb == 0b000) { // (zero page,X)
 		// Turns out that in the examples this mode is mostly used
 		// with x=0, which hides the subtle difference with (zp),y
-		unsigned short zeroPageAddress = word(mem_get(pc++), (short) 0) + x;
+		unsigned short zeroPageAddress = word(mem_get(pc++), 0) + x;
 		return word(mem_get(zeroPageAddress), mem_get(zeroPageAddress+1));
 	} else if (bbb == 0b001) { // zero page
-		return word(mem_get(pc++), (short) 0);
+		return word(mem_get(pc++), 0);
 	} else if (bbb == 0b010) {
 		return mem_get(pc++);
 	} else if (bbb == 0b011) { // absolute
-		return word(mem_get(pc++), mem_get(pc++)); // TODO handling order is different than with Java!
+		int lo = mem_get(pc++); // have to do this separately because evaluation order of the below is not guaranteed
+		return word(lo, mem_get(pc++));
 	} else if (bbb == 0b100) { // (zero page), y
-		int zeroPageAddress = word(mem_get(pc++), (short) 0);
+		int zeroPageAddress = word(mem_get(pc++), 0);
 		// looking for the word stored at the two consecutive zero-page locations
+		printf("Y: %x\n", y);
 		return word(mem_get(zeroPageAddress), mem_get(zeroPageAddress+1)) + y;
 	} else if (bbb == 0b110) { // absolute, y
-		return word(mem_get(pc++), mem_get(pc++)) + y;
+		int lo = mem_get(pc++);
+		return word(lo, mem_get(pc++)) + y;
 	} else if (bbb == 0b111) { // absolute, x
-		int address=word(mem_get(pc++), mem_get(pc++));
+		int lo = mem_get(pc++);
+		int address=word(lo, mem_get(pc++));
 		return address + x;
 	}
 	

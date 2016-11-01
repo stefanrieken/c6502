@@ -85,7 +85,6 @@ int display_init (char * app_name)
 
 static gboolean in_gtk_thread(gpointer user_data)
 {
-	printf("Hier\n");
 	gtk_widget_queue_draw(window);
 	return G_SOURCE_REMOVE;
 }

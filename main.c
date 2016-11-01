@@ -1,11 +1,22 @@
 #include <stdlib.h>
 
+#include "processor.h"
 #include "display.h"
 #include "file.h"
 
-void* worker_thread(void * app_name)
+void run()
 {
-	load((char *) app_name);
+	sp = 0xFF;
+	p_reset();
+
+	while (p_run()) {}
+	
+}
+
+void* worker_thread(void * file_name)
+{
+	load((char *) file_name);
+	run();
 }
 
 int main (int argc, char ** argv)
@@ -17,7 +28,7 @@ int main (int argc, char ** argv)
 	}
 
 	pthread_t thread;
-	pthread_create(&thread, NULL, worker_thread, argv[0]);
+	pthread_create(&thread, NULL, worker_thread, argv[1]);
 
 	display_init(argv[0]);
 }

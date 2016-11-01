@@ -8,8 +8,8 @@ That project replicates the functionality of 6502asm.com .
 Status
 ------
 
-The app launches a display and loads code into memory.
-It is not yet executed.
+It almost works!
 
-To make things more spectacular for now, the code is loaded into
-display memory (see file.c to change this back).
+Current issue is that argument processing order in C is
+different than in Java, which makes 'word(mem.get(pc++), mem.get(pc++))
+a little awkward.

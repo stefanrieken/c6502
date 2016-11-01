@@ -9,7 +9,7 @@ unsigned char mem_get(unsigned short address)
 
 void mem_set(unsigned short address, unsigned char value)
 {
-	//printf("%x = %x\n", address, value);
+	printf("%x = %x\n", address, value);
 
 	memory[address] = value;
 

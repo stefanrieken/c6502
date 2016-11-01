@@ -4,11 +4,10 @@
 
 void load(char * filename)
 {
-	FILE * file = fopen(filename, "r");
+	FILE * file = fopen(filename, "rb");
 	
 	int ch = fgetc(file);
-	unsigned short current = 0x200;
-	//unsigned short current = 0x0600;
+	unsigned short current = 0x0600;
 
 	while(ch >= 0)
 	{
@@ -17,4 +16,9 @@ void load(char * filename)
 	}
 
 	fclose(file);
+
+	// The ROM reset vector
+	mem_set(0xFFFC, (short) 0x00);
+	mem_set(0xFFFD, (short) 0x06);
+
 }

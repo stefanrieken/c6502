@@ -2,7 +2,7 @@
 #include <stdbool.h>
 
 #include "memory.h"
-#include "jump/jump_cc.h"
+#include "decode.h"
 
 unsigned short pc;
 unsigned char sp;
@@ -49,12 +49,13 @@ bool p_run()
 
 	// using the description on http://www.llx.com/~nparker/a2/opcodes.html,
 	// split opcode in aaabbbcc
-	unsigned char aaa = opcode >> 5;
-	unsigned char bbb = (opcode & 0b11100) >> 2;
-	unsigned char cc = opcode & 0b11;
+//	unsigned char aaa = opcode >> 5;
+//	unsigned char bbb = (opcode & 0b11100) >> 2;
+//	unsigned char cc = opcode & 0b11;
 
-	if (cc < 0b11) // 0b11 does not exist as an option
-		jump_cc[cc](aaa,bbb,cc);
+//	if (cc < 0b11) // 0b11 does not exist as an option
+	if ((opcode & 0b11) < 0b11)
+		decode_and_run(opcode);
 
 	if (opcode == 0) printf("Exiting on BRK\n");
 	return opcode != 0;
@@ -86,6 +87,12 @@ unsigned short resolveAddress(unsigned char bbb) {
 		int lo = mem_get(pc++);
 		int address=word(lo, mem_get(pc++));
 		return address + x;
+	} else if (bbb == 0b1000) { // NOT a true bbb value, but used to substitute zp,X with zp,Y on STX / LDX
+		unsigned short zeroPageAddress = word(mem_get(pc++), 0) + y;
+		return word(mem_get(zeroPageAddress), mem_get(zeroPageAddress+1));
+	} else if (bbb == 0b1001) { // NOT a true bbb value, but to communicate the 65c02 (zp) addressing mode
+		unsigned short zeroPageAddress = word(mem_get(pc++), 0);
+		return word(mem_get(zeroPageAddress), mem_get(zeroPageAddress+1));
 	}
 	
 	return 0; // shouldn't get here

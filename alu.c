@@ -52,7 +52,7 @@ unsigned char alu_adc(unsigned char reg, unsigned char arg)
 	if ((sr & CARY) != 0) result += 1;
 	alu_sr(CARY, result > 255);
 	result = alu_check(result);
-	alu_sr(OVFL, ((reg & 0x80) == 0) && ((result & 0x80) != 0));
+	alu_sr(OVFL, (reg & 0x80) != (result & 0x80));
 	return result;
 }
 
@@ -63,7 +63,7 @@ unsigned char alu_sbc(unsigned char reg, unsigned char arg)
 	if ((sr & CARY) != 0) result -= 1;
 	alu_sr(CARY, result > 255);
 	result = alu_check(result);
-	alu_sr(OVFL, ((reg & 0x80) == 0) && ((result & 0x80) != 0));
+	alu_sr(OVFL, (reg & 0x80) != (result & 0x80));
 	return result;
 }
 

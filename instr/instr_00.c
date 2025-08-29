@@ -23,7 +23,7 @@ void jsr(unsigned char aaa, unsigned char bbb, unsigned char cc)
 void jmp(unsigned char aaa, unsigned char bbb, unsigned char cc)
 {
     unsigned short address = resolveAddress(bbb);
-    printf("JMP (abs) address: %x\n", address);
+//    printf("JMP (abs) address: %x\n", address);
     pc = address; // explicitly absolute, because instruction is irregular
 }
 
@@ -65,11 +65,6 @@ void tya(unsigned char aaa, unsigned char bbb, unsigned char cc)
     a = alu_check(y);
 }
 
-void tsb(unsigned char aaa, unsigned char bbb, unsigned char cc)
-{
-    a = alu_check(y);
-}
-
 void sty (unsigned char aaa, unsigned char bbb, unsigned char cc)
 {
     mem_set(resolveAddress(bbb), y);
@@ -78,7 +73,7 @@ void sty (unsigned char aaa, unsigned char bbb, unsigned char cc)
 void ldy (unsigned char aaa, unsigned char bbb, unsigned char cc)
 {
     y = alu_check(resolveOperand(bbb, cc));
-    printf("Y: %x\n", y);
+//    printf("Y: %x\n", y);
 }
 
 
@@ -142,7 +137,7 @@ void br_(unsigned char aaa, unsigned char bbb, unsigned char cc)
 	unsigned char y = aaa & 0b1;
 	
 	// all branch instructions have two's complement relative addressing.
-	char relative = mem_get(pc++);
+	char relative = (char) mem_get(pc++); // cast to signed char
 
 	char * mnemonic; // TODO implement elsewhere for debugging purposes
 
@@ -154,8 +149,8 @@ void br_(unsigned char aaa, unsigned char bbb, unsigned char cc)
 
 	if ((test && y == 1) || (!test && y == 0))
 	{
-		printf("sr: %d\n", sr);
-		printf("Branching relative: %d\n", relative);
+//		printf("sr: %d\n", sr);
+//		printf("Branching relative: %d\n", relative);
 		pc += relative;
 	}
 

@@ -13,7 +13,13 @@ More code examples copied from 6502asm.com can be found at my earlier
 Java-based emulator,
 [here](https://github.com/stefanrieken/simple64/tree/master/src/test/resources).
 
-c6502 implements the 32x32 display using GTK+ 3. The keyboard is not yet implemented.
+c6502 implements the 32x32 display using GTK+ 3. The keyboard is not yet
+implemented.
+
+c6502 now has full (untested) support for the WDC65c02 extensions if compiled
+with `-DWDC65c02`. (As the 65c02 is fully backwards compatible for well-defined
+instructions, the flag is mainly used to mark 65c02 extensions in code, and / or
+to save a tiny amount of overhead.)
 
 ## 6502 instruction encoding
 Thanks to: [https://llx.com/Neil/a2/opcodes.html](https://llx.com/Neil/a2/opcodes.html)
@@ -93,4 +99,20 @@ most of the encoding gaps left by the original 6502.
         110 -       INCa* DECa* PHY*  PLY*  TXS   TSX   PHX*  PLX*  * = Instr added in 65c02
         111 a,X                             STZy* a,Y               <-- Added in 65c02 / Address mode exception
 
+
+## Approaching the (ir)regularity
+A close look reveals that the majority of the irregular instructions and
+vacancies are found at `cc= x0, bbb = xx0`, and that the few `bbb = xx1`
+exceptions are mostly useless or unsupported regular forms.
+
+For the most part, the 65c02 neatly fills in these "regular irregularites",
+with only a handful of `bbb = 01` exceptions.
+
+For this reason, when decoding we can 'overlay' the irregular even-row pattern
+before trying a regular-encoding lookup. As for the handful of 65c02 odd-row
+exceptions, we'll just have to check for these by hand first thing.
+
+Address mode exceptions can be handled by the individual instruction (as with
+STX / LDX indexed by Y), or caught earlier / independently if it affects a
+wider group (as with the `bbb = 000` per-page differences).
 

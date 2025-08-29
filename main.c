@@ -4,12 +4,14 @@
 #include "display.h"
 #include "file.h"
 
+bool slow;
 void run()
 {
 	sp = 0xFF;
 	p_reset();
 
-	while (p_run()) {}
+	if (slow) while (p_run()) { usleep(50); }
+	else while (p_run()) {}
 	
 }
 
@@ -21,9 +23,13 @@ void* worker_thread(void * file_name)
 
 int main (int argc, char ** argv)
 {
-	if (argc != 2)
+	slow = false;
+	if (argc == 3) {
+		slow=true;
+	}
+	else if (argc != 2)
 	{
-		printf("Usage: %s <binary file>\n", argv[0]);
+		printf("Usage: %s <binary file> [slow]\n", argv[0]);
 		exit(-1);
 	}
 

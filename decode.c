@@ -65,8 +65,13 @@ void decode_and_run(uint8_t opcode)
     Instruction instr = NULL;
 
 #ifdef WDC65c02
-    if (opcode == 0x89) instr = bit_imm;                    // TODO check all 65c02 one-offs: 1x BIT, 2x TSB (= regular), 2x TRB, 4x STZ
-    //else ...
+    if (opcode == 0x89) {instr = bit; bbb = 000; cc = 0b00; } // BIT #imm; pretend that it is regular
+    else if (opcode == 0x14) { instr = trb; bbb = 0b001; }    // TRB zp (= Test and Reset Bit)
+    else if (opcode == 0x1C) { instr = trb; bbb = 0b011; }    // TRB abs
+    else if (opcode == 0x64) { instr = stz; bbb = 0b001; }    // STZ zp (= STore Zero at)
+    else if (opcode == 0x9C) { instr = stz; bbb = 0b011; }    // STZ abs
+    else if (opcode == 0x74) { instr = stz; bbb = 0b101; }    // STZ zp,X
+    else if (opcode == 0x9E) { instr = stz; bbb = 0b111; }    // STZ abs,X
     else
 #endif
     if (!((cc | bbb) & 1)) {                               // Irregular instructions are found in cc = x0 and bbb = x0

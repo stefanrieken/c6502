@@ -37,9 +37,9 @@ void p_reset()
 
 bool p_run()
 {
-	printf("pc=%x\n", pc);
+//	printf("pc=%x\n", pc);
 	unsigned char opcode = mem_get(pc++);
-	printf("opcode=%x\n", opcode);
+//	printf("opcode=%x\n", opcode);
 
 	if (opcode == 0x60 && sp == 0xFF)
 	{
@@ -78,7 +78,7 @@ unsigned short resolveAddress(unsigned char bbb) {
 	} else if (bbb == 0b100) { // (zero page), y
 		int zeroPageAddress = word(mem_get(pc++), 0);
 		// looking for the word stored at the two consecutive zero-page locations
-		printf("Y: %x\n", y);
+//		printf("Y: %x\n", y);
 		return word(mem_get(zeroPageAddress), mem_get(zeroPageAddress+1)) + y;
 	} else if (bbb == 0b110) { // absolute, y
 		int lo = mem_get(pc++);

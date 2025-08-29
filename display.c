@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <gtk/gtk.h>
+#include <sys/time.h>
 
 #include "memory.h"
 
@@ -67,6 +68,7 @@ static void activate(GtkApplication * app, gpointer user_data)
 	gtk_widget_show_all(window);
 }
 
+struct timeval lastdraw;
 int display_init (char * app_name)
 {
 	GtkApplication * app;
@@ -81,6 +83,8 @@ int display_init (char * app_name)
 	g_signal_connect(app, "activate", G_CALLBACK(activate), NULL);
 	status = g_application_run(G_APPLICATION(app), argc, argv);
 	g_object_unref(app);
+
+	gettimeofday(&lastdraw, NULL);
 	return status;
 }
 
@@ -93,6 +97,10 @@ static gboolean in_gtk_thread(gpointer user_data)
 
 void display_redraw()
 {
-	gdk_threads_add_idle(in_gtk_thread, NULL);
+	struct timeval now;
+	gettimeofday(&now, NULL);
+	if (now.tv_sec != lastdraw.tv_sec || (now.tv_usec-lastdraw.tv_usec) > 10)
+		gdk_threads_add_idle(in_gtk_thread, NULL);
+	lastdraw = now;
 }
 

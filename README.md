@@ -21,6 +21,10 @@ with `-DWDC65c02`. (As the 65c02 is fully backwards compatible for well-defined
 instructions, the flag is mainly used to mark 65c02 extensions in code, and / or
 to save a tiny amount of overhead.)
 
+The file ppa.c contains a proof-of-concept stage assembler. When executed, it
+assembles 'code' from an internal C array into an a.out file; this file can
+then be run by c6502.
+
 ## 6502 instruction encoding
 Thanks to: [https://llx.com/Neil/a2/opcodes.html](https://llx.com/Neil/a2/opcodes.html)
 

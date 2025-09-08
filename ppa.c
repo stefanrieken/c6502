@@ -11,6 +11,8 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
+#include <stdbool.h>
 
 // Address modes
 
@@ -27,9 +29,15 @@ const uint8_t STK = 0b110 << 2; // cc=10 'hack' / irregular alternative: 'stack'
 const uint8_t AY  = 0b110 << 2; // Absolute, Y
 const uint8_t AX  = 0b111 << 2; // Absolute, X
 
+
+// Instruction templates
+
+// These each provide the base encoding for a mnemonic,
+// without address mode where regularity allows this.
+
 // Regular instructions
 
-// 65c02 only:
+// TSB = 65c02 only
 #define _TSB ((0b000 << 5) | 0b00)
 #define _BIT ((0b001 << 5) | 0b00)
 #define _JMP ((0b010 << 5) | 0b00)
@@ -57,7 +65,7 @@ const uint8_t AX  = 0b111 << 2; // Absolute, X
 #define _DEC ((0b110 << 5) | 0b10)
 #define _INC ((0b111 << 5) | 0b10)
 
-// Clear / set instructions
+// Clear / set instruction composition (not matching the traditional mnemonics)
 #define _CLR  ((0b0110 << 2) | 0b00)
 #define _SET  ((0b1110 << 2) | 0b00)
 #define _CARY ((0b00 << 6))
@@ -65,7 +73,7 @@ const uint8_t AX  = 0b111 << 2; // Absolute, X
 #define _OVFL ((0b10 << 6))
 #define _BCD  ((0b11 << 6))
 
-// Branch instructions
+// Branch instruction composition (not matching the traditional mnemonics)
 // Brach if clear
 #define _BRC ((0b0100 << 2) | 0b00)
 // Branch if set
@@ -80,29 +88,29 @@ const uint8_t AX  = 0b111 << 2; // Absolute, X
 // Zero flag
 #define _Z (0b11 << 6)
 
-// Push / pull SR / Acc
+// Push / pull status reg / accumulator composition (not matching the traditional mnemonics)
 #define _PSH (0b0010 << 2)
 #define _POP (0b1010 << 2)
 #define _SR  (0b00 << 6)
 #define _AR  (0b01 << 6)
 
-// The TXA, TSX family of functions can be synthesized as:
+// The TXA, TSX family of instructions can be synthesized as:
 // TXA = STX | ACC; TSX = LDX | STACK; etc.
-// TYA is still irregular (and TAY half); therefore
-// it pays to just write these out:
+// TYA is still irregular (and TAY only half); therefore
+// it pays to just write these instructions out:
 
 #define _TXA (_STX | ACC | 0b10)
 #define _TAX (_LDX | ACC | 0b10)
 // Actually fully irregular:
 #define _TYA 0b10011000
-// Still quite irregular:
+// Also a bit irregular (note cc=00):
 #define _TAY (_LDY | ACC | 0b00)
 #define _TXS (_STX | STK | 0b10)
 #define _TSX (_LDX | STK | 0b10)
 
 // That leaves us with the fully irregular instructions.
 // As with the alternative encodings above, we can detect
-// these mnemonics by their bbb placeholder not being 000.
+// these templates by their bbb placeholder not being 000.
 
 // The first 4 instructions in cc=00 are an exception:
 #define _BRK (0b00000000)
@@ -119,15 +127,15 @@ const uint8_t AX  = 0b111 << 2; // Absolute, X
 #define _NOP 0b11101010
 
 // Enum mnemonics in alphabetical order
-enum mnemonics {
+typedef enum mnemonics {
     ADC, AND, ASL, BCC, BCS, BEQ, BIT, BMI, BNE, BPL, BRK, BVC, BVS, CLC,
     CLD, CLI, CLV, CMP, CPX, CPY, DEC, DEX, DEY, EOR, INC, INX, INY, JMP,
     JSR, LDA, LDX, LDY, LSR, NOP, ORA, PHA, PHP, PLA, PLP, ROL, ROR, RTI,
     RTS, SBC, SEC, SED, SEI, STA, STX, STY, TAX, TAY, TSX, TXA, TXS, TYA,
     NUM_MNEMONICS
-};
+} Mnemonic;
 
-// And use the same order for a lookup table
+// And use the same order for the lookup table
 char lookuptable[] = {
     'A', 'D', 'C', _ADC, 'A', 'N', 'D', _AND, 'A', 'S', 'L', _ASL,
     'B', 'C', 'C', _BRC | _C, 'B', 'C', 'S', _BRS | _C, 'B', 'E', 'Q', _BRS | _Z,
@@ -220,7 +228,7 @@ void assemble(uint8_t * instructions, int n) {
             
             // NOTE: must supply ACC mode for ASL, ROL, LSR, ROR as there are also other modes
             // All other modes have at least 1 arg, so:
-            if (!(mode == ACC && mnemonic & 0b11 == 0b10)) fputc(instructions[i++], file);
+            if (!(mode == ACC && (mnemonic & 0b11) == 0b10)) fputc(instructions[i++], file);
             // All ABS modes have 2 another arg:
             if (mode == ABS || mode == AX || mode == AY) fputc(instructions[i++], file);
         } else {
@@ -230,7 +238,83 @@ void assemble(uint8_t * instructions, int n) {
     }
 }
 
+// Do not automatically include '\n', as end of line marks end of instruction
+bool is_whitespace_char(int ch) { return ch == ' ' || ch == '\t' || ch == '\r'; }
+
+#define UPPER (~(1 << 5))
+
+Mnemonic lookup(char mnem[3]) {
+    for (int i=0; i<NUM_MNEMONICS;i++) {
+        if (
+            lookuptable[4*i+0] == mnem[0] &&
+            lookuptable[4*i+1] == mnem[1] &&
+            lookuptable[4*i+2] == mnem[2]
+        ) return i;
+    }
+    printf("Mnem not found %c%c%c\n", mnem[0], mnem[1], mnem[2]);
+    return 0;
+}
+
+bool parse_one(FILE * in) {
+    char mnem[3]; int idx=0;
+    int mode = 0;
+
+    int ch = fgetc(in);
+    while (is_whitespace_char(ch) || ch == '\n') ch = fgetc(in);
+
+    while ((ch & UPPER) > 64 && (ch & UPPER) < 91) {
+        mnem[idx++] = (ch & UPPER); ch = fgetc(in);
+    }
+    // At this point line should either contain a mnemonic, or nothing at all
+    if (idx != 0 && idx != 3) { printf("Parse error\n"); return false; }
+    if (idx == 3) {
+        // Continue to parse args.
+        int number = 0;
+        int base = 10;
+        bool have_arg = false;
+
+        while (is_whitespace_char(ch)) ch = fgetc(in);
+        // TODO check for '()' modes
+        if (ch == '#') { have_arg = true; mode = IMM; ch = fgetc(in); }
+        if (ch == '$') { have_arg = true; base = 16; ch = fgetc(in); }
+
+        // Numeric arguments may be written in decimal; or following an '$', in hexadecimal.
+        // The easiest is to just interpret any number below 256 as a 1-byte argument; but I
+        // have not verified if all 2-byte argument instructions also have a 1-byte (zero page)
+        // variant; nor do I know how other assemblers respond to a number like $002A .
+        bool hexrange = (ch & UPPER) >= 'A' && (ch & UPPER) <='F';
+        while ((ch >= '0' && ch <= '9') || (base == 16 && hexrange))  {
+            have_arg = true;
+            int digit = hexrange ? (((ch & UPPER) - 'A') + 10) : ch - '0';
+            number = number * base + digit;
+            ch = fgetc(in);
+            hexrange = (ch & UPPER) >= 'A' && (ch & UPPER) <='F';
+        }
+
+        // TODO check for ,X / ,Y modes
+        if (have_arg && mode == 0) {
+            if (number > 255) mode = ABS; else mode = ZP;
+        }
+
+        // Call this done for now; print results
+        Mnemonic n = lookup(mnem);// printf("lookup: %d\n", n);
+        printf("%02x", encode(n, lookuptable[n*4+3], mode));
+        if (have_arg) {
+            printf(" %02x", number & 0xFF);
+            if (number > 255) printf(" %02x", (number >> 8));
+        }
+        printf("\n");
+    }
+
+    return idx == 3;
+}
+
 int main (int argc, char ** argv) {
-    printf("Sizeof enum: %d sizeof lookuptable: %d sta: %c%c%c\n", NUM_MNEMONICS, sizeof(lookuptable), lookuptable[(STA*4)+0], lookuptable[(STA*4)+1], lookuptable[(STA*4)+2]);
+    //printf("Sizeof enum: %d sizeof lookuptable: %d sta: %c%c%c\n", NUM_MNEMONICS, sizeof(lookuptable), lookuptable[(STA*4)+0], lookuptable[(STA*4)+1], lookuptable[(STA*4)+2]);
+    printf("Writing test program to a.out...");
     assemble(instructions, sizeof(instructions) / sizeof(char));
+    printf("Done.\n");
+    printf("Write an instruction and get the encoded result in return. ^D to stop.\n");
+    printf("(Presently only detecting immediate, absolute and zero page addressing modes)\n");
+    while (parse_one(stdin)) {};
 }

@@ -29,95 +29,137 @@ const uint8_t AX  = 0b111 << 2; // Absolute, X
 
 // Regular instructions
 
-const uint8_t TSB = (0b000 << 5) | 0b00; // 65c02 only
-const uint8_t BIT = (0b001 << 5) | 0b00;
-const uint8_t JMP = (0b010 << 5) | 0b00;
-const uint8_t JPI = (0b011 << 5) | 0b00;
-const uint8_t STY = (0b100 << 5) | 0b00;
-const uint8_t LDY = (0b101 << 5) | 0b00;
-const uint8_t CPY = (0b110 << 5) | 0b00;
-const uint8_t CPX = (0b111 << 5) | 0b00;
+// 65c02 only:
+#define _TSB ((0b000 << 5) | 0b00)
+#define _BIT ((0b001 << 5) | 0b00)
+#define _JMP ((0b010 << 5) | 0b00)
+#define _JPI ((0b011 << 5) | 0b00)
+#define _STY ((0b100 << 5) | 0b00)
+#define _LDY ((0b101 << 5) | 0b00)
+#define _CPY ((0b110 << 5) | 0b00)
+#define _CPX ((0b111 << 5) | 0b00)
 
-const uint8_t ORA = (0b000 << 5) | 0b01;
-const uint8_t AND = (0b001 << 5) | 0b01;
-const uint8_t EOR = (0b010 << 5) | 0b01;
-const uint8_t ADC = (0b011 << 5) | 0b01;
-const uint8_t STA = (0b100 << 5) | 0b01;
-const uint8_t LDA = (0b101 << 5) | 0b01;
-const uint8_t CMP = (0b110 << 5) | 0b01;
-const uint8_t SBC = (0b111 << 5) | 0b01;
+#define _ORA ((0b000 << 5) | 0b01)
+#define _AND ((0b001 << 5) | 0b01)
+#define _EOR ((0b010 << 5) | 0b01)
+#define _ADC ((0b011 << 5) | 0b01)
+#define _STA ((0b100 << 5) | 0b01)
+#define _LDA ((0b101 << 5) | 0b01)
+#define _CMP ((0b110 << 5) | 0b01)
+#define _SBC ((0b111 << 5) | 0b01)
 
-const uint8_t ASL = (0b000 << 5) | 0b10;
-const uint8_t ROL = (0b001 << 5) | 0b10;
-const uint8_t LSR = (0b010 << 5) | 0b10;
-const uint8_t ROR = (0b011 << 5) | 0b10;
-const uint8_t STX = (0b100 << 5) | 0b10;
-const uint8_t LDX = (0b101 << 5) | 0b10;
-const uint8_t DEC = (0b110 << 5) | 0b10;
-const uint8_t INC = (0b111 << 5) | 0b10;
+#define _ASL ((0b000 << 5) | 0b10)
+#define _ROL ((0b001 << 5) | 0b10)
+#define _LSR ((0b010 << 5) | 0b10)
+#define _ROR ((0b011 << 5) | 0b10)
+#define _STX ((0b100 << 5) | 0b10)
+#define _LDX ((0b101 << 5) | 0b10)
+#define _DEC ((0b110 << 5) | 0b10)
+#define _INC ((0b111 << 5) | 0b10)
 
 // Clear / set instructions
-const uint8_t CLR = (0b0110 << 2) | 0b00;
-const uint8_t SET = (0b1110 << 2) | 0b00;
-const uint8_t CARY = (0b00 << 6);
-const uint8_t INTR = (0b01 << 6);
-const uint8_t OVFL = (0b10 << 6);
-const uint8_t BCD  = (0b11 << 6);
+#define _CLR  ((0b0110 << 2) | 0b00)
+#define _SET  ((0b1110 << 2) | 0b00)
+#define _CARY ((0b00 << 6))
+#define _INTR ((0b01 << 6))
+#define _OVFL ((0b10 << 6))
+#define _BCD  ((0b11 << 6))
 
 // Branch instructions
-const uint8_t BRC = (0b0100 << 2) | 0b00; // Branch if clear
-const uint8_t BRS = (0b1100 << 2) | 0b00; // Branch if set
-// Registers use different encoding than with clear / set
-const uint8_t N = (0b00 << 6); // Negative flag
-const uint8_t V = (0b01 << 6); // Overflow flag
-const uint8_t C = (0b10 << 6); // Carry flag
-const uint8_t Z = (0b11 << 6); // Zero flag
+// Brach if clear
+#define _BRC ((0b0100 << 2) | 0b00)
+// Branch if set
+#define _BRS ((0b1100 << 2) | 0b00)
+// Registers use different encoding than with clear / set:
+// Negative flag
+#define _N (0b00 << 6)
+// Overflow flag
+#define _V (0b01 << 6)
+// Carry flag
+#define _C (0b10 << 6)
+// Zero flag
+#define _Z (0b11 << 6)
 
 // Push / pull SR / Acc
-const uint8_t PSH = (0b0010 << 2);
-const uint8_t POP = (0b1010 << 2);
-const uint8_t SR  = (0b00 << 6);
-const uint8_t AR  = (0b01 << 6);
+#define _PSH (0b0010 << 2)
+#define _POP (0b1010 << 2)
+#define _SR  (0b00 << 6)
+#define _AR  (0b01 << 6)
 
 // The TXA, TSX family of functions can be synthesized as:
 // TXA = STX | ACC; TSX = LDX | STACK; etc.
 // TYA is still irregular (and TAY half); therefore
 // it pays to just write these out:
 
-const uint8_t TXA = STX | ACC | 0b10;
-const uint8_t TAX = LDX | ACC | 0b10;
-const uint8_t TYA = 0b10011000; // Actually fully irregular
-const uint8_t TAY = LDY | ACC | 0b00; // Still quite irregular
-const uint8_t TXS = STX | STK | 0b10;
-const uint8_t TSX = LDX | STK | 0b10;
+#define _TXA (_STX | ACC | 0b10)
+#define _TAX (_LDX | ACC | 0b10)
+// Actually fully irregular:
+#define _TYA 0b10011000
+// Still quite irregular:
+#define _TAY (_LDY | ACC | 0b00)
+#define _TXS (_STX | STK | 0b10)
+#define _TSX (_LDX | STK | 0b10)
 
 // That leaves us with the fully irregular instructions.
 // As with the alternative encodings above, we can detect
 // these mnemonics by their bbb placeholder not being 000.
 
 // The first 4 instructions in cc=00 are an exception:
-const uint8_t BRK = 0b00000000;
-const uint8_t JSR = 0b00100000;
-const uint8_t RTI = 0b01000000;
-const uint8_t RTS = 0b11000000;
+#define _BRK (0b00000000)
+#define _JSR (0b00100000)
+#define _RTI (0b01000000)
+#define _RTS (0b11000000)
 
 // But these are all detectable by bbb != 000:
-const uint8_t DEY = 0b10001000;
-//const uint8_t TAY = 0b10101000;
-const uint8_t INY = 0b11001000;
-const uint8_t INX = 0b11101000;
-const uint8_t DEX = 0b11001010;
-const uint8_t NOP = 0b11101010;
+#define _DEY 0b10001000
+//#define _TAY 0b10101000
+#define _INY 0b11001000
+#define _INX 0b11101000
+#define _DEX 0b11001010
+#define _NOP 0b11101010
+
+// Enum mnemonics in alphabetical order
+enum mnemonics {
+    ADC, AND, ASL, BCC, BCS, BEQ, BIT, BMI, BNE, BPL, BRK, BVC, BVS, CLC,
+    CLD, CLI, CLV, CMP, CPX, CPY, DEC, DEX, DEY, EOR, INC, INX, INY, JMP,
+    JSR, LDA, LDX, LDY, LSR, NOP, ORA, PHA, PHP, PLA, PLP, ROL, ROR, RTI,
+    RTS, SBC, SEC, SED, SEI, STA, STX, STY, TAX, TAY, TSX, TXA, TXS, TYA,
+    NUM_MNEMONICS
+};
+
+// And use the same order for a lookup table
+char lookuptable[] = {
+    'A', 'D', 'C', _ADC, 'A', 'N', 'D', _AND, 'A', 'S', 'L', _ASL,
+    'B', 'C', 'C', _BRC | _C, 'B', 'C', 'S', _BRS | _C, 'B', 'E', 'Q', _BRS | _Z,
+    'B', 'I', 'T', _BIT,
+    'B', 'M', 'I', _BRS | _N, 'B', 'N', 'E', _BRC | _Z,
+    'B', 'P', 'L', _BRC | _N,
+    'B', 'R', 'K', _BRK,
+    'B', 'V', 'C', _BRC | _V, 'B', 'V', 'S', _BRS | _V,
+    'C', 'L', 'C', _CLR | _CARY, 'C', 'L', 'D', _CLR | _BCD, 'C', 'L', 'I', _CLR | _INTR, 'C', 'L', 'V', _CLR | _OVFL,
+    'C', 'M', 'P', _CMP, 'C', 'P', 'X', _CPX, 'C', 'P', 'Y', _CPY,
+    'D', 'E', 'C', _DEC, 'D', 'E', 'X', _DEX, 'D', 'E', 'Y', _DEY,
+    'E', 'O', 'R', _EOR,
+    'I', 'N', 'C', _INC, 'I', 'N', 'X', _INX, 'I', 'N', 'Y', _INY,
+    'J', 'M', 'P', _JMP, 'J', 'S', 'R', _JSR,
+    'L', 'D', 'A', _LDA, 'L', 'D', 'X', _LDX, 'L', 'D', 'Y', _LDY, 'L', 'S', 'R', _LSR,
+    'N', 'O', 'P', _NOP, 'O', 'R', 'A', _ORA,
+    'P', 'H', 'A', _PSH | _AR, 'P', 'H', 'P', _PSH | _SR, 'P', 'L', 'A', _POP | _AR, 'P', 'L', 'P', _POP | _SR,
+    'R', 'O', 'L', _ROL, 'R', 'O', 'R', _ROR, 'R', 'T', 'I', _RTI, 'R', 'T', 'S', _RTS,
+    'S', 'B', 'C', _SBC,
+    'S', 'E', 'C', _SET | _CARY, 'S', 'E', 'D', _SET | _BCD, 'S', 'E', 'I', _SET | _INTR,
+    'S', 'T', 'A', _STA, 'S', 'T', 'X', _STX, 'S', 'T', 'Y', _STY,
+    'T', 'A', 'X', _TAX, 'T', 'A', 'Y', _TAY, 'T', 'S', 'X', _TSX, 'T', 'X', 'A', _TXA, 'T', 'X', 'S', _TXS, 'T', 'Y', 'A', _TYA
+};
 
 // Address mode irregularities can be kept at a minimum if we read them as follows:
 // - JSR is absolute
 // - LDY, CPY and CPX: all IMM versions must have bbb=000 (be wary of clash with 'regular' TAY construction)
 // - STX, LDX has z,Y and a,Y modes instead of z,X / a,X
 
-
 // Thanks to our pre-work, even most of the irregular mnemonics can
 // now simply be ORed with their mode (which is often 'implied'). 
-uint8_t encode(uint8_t mnem, uint8_t mode) {
+uint8_t encode(uint8_t mnem, uint8_t template, uint8_t mode) {
      // mode encoding irregularities
     if (mnem == JSR) mode = 0;
     else if (mnem == LDY && mode == IMM) mode = 0;
@@ -126,7 +168,7 @@ uint8_t encode(uint8_t mnem, uint8_t mode) {
     else if (mnem == LDX && mode == AY) mode = AX;
 
     // else: regular instruction, or mode = 0 for implied
-    return mnem | mode;
+    return template | mode;
 }
 
 // 'disco' example from 6502asm.com
@@ -140,7 +182,7 @@ uint8_t instructions[] = {
     INY,
     TYA,
     CMP, IMM, 16, // NOTE wrong in original (zero page), but it still works; this number is irrelevant
-    BRC, Z, 4, // jump 4 forward (skip jmp to start)
+    BNE, 4, // jump 4 forward (skip jmp to start)
     INY,
     JMP, ABS, 0x00, 0x06, // = start
     INY,
@@ -154,18 +196,25 @@ void assemble(uint8_t * instructions, int n) {
     FILE * file = fopen("a.out", "w");
     int i=0;
     while (i<n) {
+        // The instructions array refers to the mnemonics by their enum values.
+	// This allows us to distinguish mnemonics that end up having the same binary-value template.
+	// (Which really only occurs near BRK, JSR, RTI and RTS, but should be avoided anyway.)
         uint8_t mnemonic = instructions[i++];
 
         // Work out if mode is 'implied' and therefore also implied in our code
+        uint8_t template = lookuptable[mnemonic*4+3];
 
-        if (mnemonic == BRC || mnemonic == BRS ||
-                ((mnemonic & 0b11100) == 0
-                // && mnemonic != BRK && mnemonic != RTI && mnemonic != RTS // TODO differentiate between JMP and RTI et al. before knowing the mode
-                )) {
+	if ((template & 0b11111) == 0b10000) { // Branch instruction
+            // No explicit mode follows, but we do take a relative argument
+	    fputc(encode(mnemonic, template, 0), file);
+	    fputc(instructions[i++], file);
+        } else if ((template & 0b11100) == 0 // No mode given yet, but check for incidental mode==000:
+                && mnemonic != BRK && mnemonic != RTI && mnemonic != RTS
+                ) {
             // Regular instruction, or at least apparent mode supplied by user
             // This also works for our branching syntax
             uint8_t mode = instructions[i++];
-            fputc(encode(mnemonic, mode), file);
+            fputc(encode(mnemonic, template, mode), file);
 
             // Infer number of args
             
@@ -176,11 +225,12 @@ void assemble(uint8_t * instructions, int n) {
             if (mode == ABS || mode == AX || mode == AY) fputc(instructions[i++], file);
         } else {
             // else assume implied; 0 args
-            fputc(encode(mnemonic, 0), file);
+            fputc(encode(mnemonic, template, 0), file);
         }
     }
 }
 
 int main (int argc, char ** argv) {
+    printf("Sizeof enum: %d sizeof lookuptable: %d sta: %c%c%c\n", NUM_MNEMONICS, sizeof(lookuptable), lookuptable[(STA*4)+0], lookuptable[(STA*4)+1], lookuptable[(STA*4)+2]);
     assemble(instructions, sizeof(instructions) / sizeof(char));
 }

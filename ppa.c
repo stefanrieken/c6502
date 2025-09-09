@@ -172,10 +172,10 @@ char lookuptable[] = {
 // now simply be ORed with their mode (which is often 'implied'). 
 uint8_t encode(uint8_t mnem, uint8_t template, uint8_t mode) {
     if (mode & IND) {
-	mode &= ~IND;
+        mode &= ~IND;
         if (mnem == JMP && mode == ABS) return 0x6C;
-	else if (mnem == JMP && mode == AX) return 0x7C; // 65c02 only
-	else printf("Error: invalid indirect mode\n");
+        else if (mnem == JMP && mode == AX) return 0x7C; // 65c02 only
+        else printf("Error: invalid indirect mode\n");
     }
 
      // mode encoding irregularities
@@ -215,17 +215,17 @@ void assemble(uint8_t * instructions, int n) {
     int i=0;
     while (i<n) {
         // The instructions array refers to the mnemonics by their enum values.
-	// This allows us to distinguish mnemonics that end up having the same binary-value template.
-	// (Which really only occurs near BRK, JSR, RTI and RTS, but should be avoided anyway.)
+        // This allows us to distinguish mnemonics that end up having the same binary-value template.
+        // (Which really only occurs near BRK, JSR, RTI and RTS, but should be avoided anyway.)
         uint8_t mnemonic = instructions[i++];
 
         // Work out if mode is 'implied' and therefore also implied in our code
         uint8_t template = lookuptable[mnemonic*4+3];
 
-	if ((template & 0b11111) == 0b10000) { // Branch instruction
+        if ((template & 0b11111) == 0b10000) { // Branch instruction
             // No explicit mode follows, but we do take a relative argument
-	    fputc(encode(mnemonic, template, 0), file);
-	    fputc(instructions[i++], file);
+            fputc(encode(mnemonic, template, 0), file);
+            fputc(instructions[i++], file);
         } else if ((template & 0b11100) == 0 // No mode given yet, but check for incidental mode==000:
                 && mnemonic != BRK && mnemonic != RTI && mnemonic != RTS
                 ) {
@@ -287,12 +287,12 @@ bool parse_one(FILE * in) {
         int number = 0;
         int base = 10;
         bool have_arg = false;
-	int bracket_state = 0;
-	char indexed_by = 0;
+        int bracket_state = 0;
+        char indexed_by = 0;
 
         while (is_whitespace_char(ch)) ch = fgetc(in);
         // TODO check for '()' modes
-	if (ch == '(') { have_arg = true; bracket_state=1; ch = next_non_whitespace_char(in, true); }
+        if (ch == '(') { have_arg = true; bracket_state=1; ch = next_non_whitespace_char(in, true); }
         if (ch == '#') { have_arg = true; mode = IMM; ch = fgetc(in); }
         if (ch == '$') { have_arg = true; base = 16; ch = fgetc(in); }
 
@@ -309,46 +309,46 @@ bool parse_one(FILE * in) {
             hexrange = (ch & UPPER) >= 'A' && (ch & UPPER) <='F';
         }
 
-	if (ch ==  ',')  {
+        if (ch ==  ',')  {
             indexed_by = next_non_whitespace_char(in, true) & UPPER;
-	    // This is confusing for 6502 assembly programmers, so don't quietly accept it.
-	    if (indexed_by == 'Y' && bracket_state == 1) printf("Warning: it is (z),y rather than (z,y)\n");
-	    ch = next_non_whitespace_char(in, false);
-	}
-	if (bracket_state == 1 && ch == ')') { bracket_state=2; ch = next_non_whitespace_char(in, false); }
-	if (indexed_by == 0 && ch == ',') {
+            // This is confusing for 6502 assembly programmers, so don't quietly accept it.
+            if (indexed_by == 'Y' && bracket_state == 1) printf("Warning: it is (z),y rather than (z,y)\n");
+            ch = next_non_whitespace_char(in, false);
+        }
+        if (bracket_state == 1 && ch == ')') { bracket_state=2; ch = next_non_whitespace_char(in, false); }
+        if (indexed_by == 0 && ch == ',') {
             indexed_by = next_non_whitespace_char(in, true) & UPPER;
-	    // This is confusing for 6502 assembly programmers, so don't quietly accept it.
-	    if (indexed_by == 'X' && bracket_state == 1) printf("Warning: it is (z,x) rather than (z),x\n");
-	    ch = next_non_whitespace_char(in, false);
-	}
-	if (bracket_state == 1 && ch == ')') { bracket_state=2; ch = next_non_whitespace_char(in, false); }
+            // This is confusing for 6502 assembly programmers, so don't quietly accept it.
+            if (indexed_by == 'X' && bracket_state == 1) printf("Warning: it is (z,x) rather than (z),x\n");
+            ch = next_non_whitespace_char(in, false);
+        }
+        if (bracket_state == 1 && ch == ')') { bracket_state=2; ch = next_non_whitespace_char(in, false); }
 
-	// That's parsing done, now process the info
+        // That's parsing done, now process the info
         Mnemonic n = lookup(mnem);// printf("lookup: %d\n", n);
 
-	// Determine mode
+        // Determine mode
         if (have_arg && mode == 0) {
             if (number > 255) mode = ABS; else mode = ZP;
         }
 
-	if (indexed_by == 'X') {
+        if (indexed_by == 'X') {
             if(mode == ABS) { mode = AX; if (bracket_state == 2) mode |= IND; } // Assume JMP(abs,X), mark as such
-	    if(mode == ZP) mode = bracket_state == 2 ? ZXI : ZX;
-	} else if (indexed_by == 'Y') {
+            if(mode == ZP) mode = bracket_state == 2 ? ZXI : ZX;
+        } else if (indexed_by == 'Y') {
             if(mode == ABS) mode = AY;
-	    if(mode == ZP) mode = bracket_state == 2 ? ZIY : ZY;
-	} else {
+            if(mode == ZP) mode = bracket_state == 2 ? ZIY : ZY;
+        } else {
             if (indexed_by != 0) printf("Error: invalid indexing mode\n");
 #ifdef WDC65c02
-	    // TODO detect the instructions using this
-	    if (mode == ZP && bracket_state == 2) mode = ZPI; else
+            // TODO detect the instructions using this
+            if (mode == ZP && bracket_state == 2) mode = ZPI; else
 #endif
-	    if (bracket_state == 2) mode |= IND; // Assume JMP(abs), mark as such
-	}
+            if (bracket_state == 2) mode |= IND; // Assume JMP(abs), mark as such
+        }
 
-	// Print result
-	if (number > 255 && mode == IMM) printf("Warn: immediate argument exceeds byte limit\n");
+        // Print result
+        if (number > 255 && mode == IMM) printf("Warn: immediate argument exceeds byte limit\n");
         printf("%02x", encode(n, lookuptable[n*4+3], mode));
         if (have_arg) {
             printf(" %02x", number & 0xFF);

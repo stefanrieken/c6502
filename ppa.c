@@ -23,12 +23,15 @@ const uint8_t IMM = 0b010 << 2;
 const uint8_t ACC = 0b010 << 2; // Note: same as IMM, so catch the difference!
 const uint8_t ABS = 0b011 << 2;
 const uint8_t ZIY = 0b100 << 2; // Zero page indirect, Y: (z),Y
+const uint8_t ZPI = 0b100 << 2; // 65c02 only: (zp)
 const uint8_t ZX  = 0b101 << 2; // Zero page, X
 const uint8_t ZY  = 0b101 << 2; // Zero page, Y; irregular alternative
 const uint8_t STK = 0b110 << 2; // cc=10 'hack' / irregular alternative: 'stack' addressing mode
 const uint8_t AY  = 0b110 << 2; // Absolute, Y
 const uint8_t AX  = 0b111 << 2; // Absolute, X
 
+// To communicate JMP(x) modes
+#define IND 0b100000
 
 // Instruction templates
 
@@ -168,6 +171,13 @@ char lookuptable[] = {
 // Thanks to our pre-work, even most of the irregular mnemonics can
 // now simply be ORed with their mode (which is often 'implied'). 
 uint8_t encode(uint8_t mnem, uint8_t template, uint8_t mode) {
+    if (mode & IND) {
+	mode &= ~IND;
+        if (mnem == JMP && mode == ABS) return 0x6C;
+	else if (mnem == JMP && mode == AX) return 0x7C; // 65c02 only
+	else printf("Error: invalid indirect mode\n");
+    }
+
      // mode encoding irregularities
     if (mnem == JSR) mode = 0;
     else if (mnem == LDY && mode == IMM) mode = 0;
@@ -241,6 +251,12 @@ void assemble(uint8_t * instructions, int n) {
 // Do not automatically include '\n', as end of line marks end of instruction
 bool is_whitespace_char(int ch) { return ch == ' ' || ch == '\t' || ch == '\r'; }
 
+int next_non_whitespace_char(FILE * in, bool skip_newline) {
+    int ch = fgetc(in);
+    while (is_whitespace_char(ch) || (skip_newline && ch == '\n')) ch = fgetc(in);
+    return ch;
+}
+
 #define UPPER (~(1 << 5))
 
 Mnemonic lookup(char mnem[3]) {
@@ -259,8 +275,7 @@ bool parse_one(FILE * in) {
     char mnem[3]; int idx=0;
     int mode = 0;
 
-    int ch = fgetc(in);
-    while (is_whitespace_char(ch) || ch == '\n') ch = fgetc(in);
+    int ch = next_non_whitespace_char(in, true);
 
     while ((ch & UPPER) > 64 && (ch & UPPER) < 91) {
         mnem[idx++] = (ch & UPPER); ch = fgetc(in);
@@ -272,9 +287,12 @@ bool parse_one(FILE * in) {
         int number = 0;
         int base = 10;
         bool have_arg = false;
+	int bracket_state = 0;
+	char indexed_by = 0;
 
         while (is_whitespace_char(ch)) ch = fgetc(in);
         // TODO check for '()' modes
+	if (ch == '(') { have_arg = true; bracket_state=1; ch = next_non_whitespace_char(in, true); }
         if (ch == '#') { have_arg = true; mode = IMM; ch = fgetc(in); }
         if (ch == '$') { have_arg = true; base = 16; ch = fgetc(in); }
 
@@ -291,13 +309,46 @@ bool parse_one(FILE * in) {
             hexrange = (ch & UPPER) >= 'A' && (ch & UPPER) <='F';
         }
 
-        // TODO check for ,X / ,Y modes
+	if (ch ==  ',')  {
+            indexed_by = next_non_whitespace_char(in, true) & UPPER;
+	    // This is confusing for 6502 assembly programmers, so don't quietly accept it.
+	    if (indexed_by == 'Y' && bracket_state == 1) printf("Warning: it is (z),y rather than (z,y)\n");
+	    ch = next_non_whitespace_char(in, false);
+	}
+	if (bracket_state == 1 && ch == ')') { bracket_state=2; ch = next_non_whitespace_char(in, false); }
+	if (indexed_by == 0 && ch == ',') {
+            indexed_by = next_non_whitespace_char(in, true) & UPPER;
+	    // This is confusing for 6502 assembly programmers, so don't quietly accept it.
+	    if (indexed_by == 'X' && bracket_state == 1) printf("Warning: it is (z,x) rather than (z),x\n");
+	    ch = next_non_whitespace_char(in, false);
+	}
+	if (bracket_state == 1 && ch == ')') { bracket_state=2; ch = next_non_whitespace_char(in, false); }
+
+	// That's parsing done, now process the info
+        Mnemonic n = lookup(mnem);// printf("lookup: %d\n", n);
+
+	// Determine mode
         if (have_arg && mode == 0) {
             if (number > 255) mode = ABS; else mode = ZP;
         }
 
-        // Call this done for now; print results
-        Mnemonic n = lookup(mnem);// printf("lookup: %d\n", n);
+	if (indexed_by == 'X') {
+            if(mode == ABS) { mode = AX; if (bracket_state == 2) mode |= IND; } // Assume JMP(abs,X), mark as such
+	    if(mode == ZP) mode = bracket_state == 2 ? ZXI : ZX;
+	} else if (indexed_by == 'Y') {
+            if(mode == ABS) mode = AY;
+	    if(mode == ZP) mode = bracket_state == 2 ? ZIY : ZY;
+	} else {
+            if (indexed_by != 0) printf("Error: invalid indexing mode\n");
+#ifdef WDC65c02
+	    // TODO detect the instructions using this
+	    if (mode == ZP && bracket_state == 2) mode = ZPI; else
+#endif
+	    if (bracket_state == 2) mode |= IND; // Assume JMP(abs), mark as such
+	}
+
+	// Print result
+	if (number > 255 && mode == IMM) printf("Warn: immediate argument exceeds byte limit\n");
         printf("%02x", encode(n, lookuptable[n*4+3], mode));
         if (have_arg) {
             printf(" %02x", number & 0xFF);
@@ -311,10 +362,9 @@ bool parse_one(FILE * in) {
 
 int main (int argc, char ** argv) {
     //printf("Sizeof enum: %d sizeof lookuptable: %d sta: %c%c%c\n", NUM_MNEMONICS, sizeof(lookuptable), lookuptable[(STA*4)+0], lookuptable[(STA*4)+1], lookuptable[(STA*4)+2]);
-    printf("Writing test program to a.out...");
+    /*printf("Writing test program to a.out...");
     assemble(instructions, sizeof(instructions) / sizeof(char));
-    printf("Done.\n");
+    printf("Done.\n");*/
     printf("Write an instruction and get the encoded result in return. ^D to stop.\n");
-    printf("(Presently only detecting immediate, absolute and zero page addressing modes)\n");
     while (parse_one(stdin)) {};
 }

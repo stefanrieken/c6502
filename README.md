@@ -83,8 +83,8 @@ most of the encoding gaps left by the original 6502.
                     ORA   AND   EOR   ADC   STA   LDA   CMP   SBC
         000 (z,X)
         001 zp
-        010 #
-        011 abs                             BIT#*                   * = Instr added in 65c02
+        010 #                               BIT#*                   * = Instr added in 65c02
+        011 abs
         100 (z),Y
         101 z,X
         110 a,Y
@@ -97,7 +97,7 @@ most of the encoding gaps left by the original 6502.
         000 #       -     -     -     -     -           -     -     <-- In practice, some are 2-cycle NOPs
         001 zp
         010 acc                             TXA   TAX   DEX   NOP
-        011 abs                             -     -     -     -
+        011 abs
         100 (zp)*   ORA   AND   EOR   ADC   STA   LDA   CMP   SBC   <-- 65c02 only: new (zp) mode
         101 z,X                             z,Y   z,Y               <-- Address mode exception
         110 -       INCa* DECa* PHY*  PLY*  TXS   TSX   PHX*  PLX*  * = Instr added in 65c02
